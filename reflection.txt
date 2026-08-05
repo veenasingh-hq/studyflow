@@ -1,0 +1,15 @@
+StudyFlow - Key Learnings & Reflection
+
+1. Full-Stack Integration:
+Connecting React with FastAPI required handling asynchronous HTTP requests cleanly and managing loading and error states effectively in the UI.
+
+2. Clean Backend Architecture:
+Refactoring backend logic into a dedicated CRUD layer (crud.py) and schema layer (schemas.py) dramatically improved code readability and maintainability.
+
+3. React State & Performance:
+Building real-time search and filter features taught me how to optimize state management and avoid redundant backend calls using controlled components and efficient JavaScript filtering.
+
+4. Future Scope:
+- Migrate JSON storage to a SQL database like SQLite/PostgreSQL using SQLAlchemy.
+- Add JWT-based user authentication for multi-user support.
+- Implement a Pomodoro timer and Kanban board view for improved student productivity.

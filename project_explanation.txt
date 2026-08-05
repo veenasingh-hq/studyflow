@@ -1,0 +1,13 @@
+Project Name: StudyFlow (Full-Stack Task Management System)
+
+1. What problem does this project solve?
+StudyFlow provides a lightweight, focused task manager for students to organize coursework, track deadlines, and filter assignments by priority and category without complex overhead.
+
+2. How is the architecture designed?
+- Frontend: Decoupled React application using Vite for rapid building. State flows down through functional components while events bubble up. API interaction is centralized in src/api.js.
+- Backend: Modular FastAPI server split into route definitions (main.py), business logic (crud.py), data validation schemas (schemas.py), and storage handlers (storage.py).
+
+3. Key Engineering Highlights:
+- CORS Configuration: Enabled cross-origin requests specifically for local development ports.
+- Data Validation: Pydantic schemas enforce non-empty strings and valid priority options.
+- Dynamic Filtering: React useMemo hooks ensure client-side search and filtering execute efficiently without unnecessary re-renders.
