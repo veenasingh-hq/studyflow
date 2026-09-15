@@ -97,3 +97,20 @@ def delete_task(task_id: str):
 
     storage.save_tasks(tasks)
     return None
+
+    # --- TOGGLE TASK COMPLETION ---
+@app.patch("/tasks/{task_id}/complete", response_model=TaskResponse)
+def toggle_task_completion(task_id: str):
+    tasks = storage.load_tasks()
+
+    task = next((t for t in tasks if t["id"] == task_id), None)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task["completed"] = not task["completed"]
+    task["updated_at"] = datetime.utcnow().isoformat()
+
+    storage.save_tasks(tasks)
+
+    return task
