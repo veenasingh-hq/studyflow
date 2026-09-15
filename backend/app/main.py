@@ -29,8 +29,29 @@ def root():
 
 # --- GET ALL TASKS ---
 @app.get("/tasks", response_model=List[TaskResponse])
-def get_tasks():
-    return storage.load_tasks()
+def get_tasks(
+    completed: Optional[bool] = None,
+    category: Optional[str] = None,
+    priority: Optional[str] = None
+):
+    tasks = storage.load_tasks()
+
+    if completed is not None:
+        tasks = [task for task in tasks if task["completed"] == completed]
+
+    if category:
+        tasks = [
+            task for task in tasks
+            if task["category"].lower() == category.lower()
+        ]
+
+    if priority:
+        tasks = [
+            task for task in tasks
+            if task["priority"].lower() == priority.lower()
+        ]
+
+    return tasks
 
 
 # --- CREATE TASK ---
