@@ -6,31 +6,46 @@ export default function TaskForm({ onTaskAdded }) {
     description: '',
     category: '',
     priority: 'medium',
-    dueDate: ''
+    dueDate: '',
+    estimated_minutes: 30
   });
+
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim()) return alert("Please enter a task title!");
+
+    if (!formData.title.trim()) {
+      return alert("Please enter a task title!");
+    }
 
     setLoading(true);
+
     try {
-      await onTaskAdded(formData);
-      // Reset form on success
+      await onTaskAdded({
+        ...formData,
+        estimated_minutes: Number(formData.estimated_minutes)
+      });
+
       setFormData({
         title: '',
         description: '',
         category: '',
         priority: 'medium',
-        dueDate: ''
+        dueDate: '',
+        estimated_minutes: 30
       });
     } catch (err) {
-      alert("Failed to create task. Make sure FastAPI server is running.");
+      alert(
+        "Failed to create task. Make sure FastAPI server is running."
+      );
     } finally {
       setLoading(false);
     }
@@ -48,6 +63,7 @@ export default function TaskForm({ onTaskAdded }) {
           <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
             Task Title *
           </label>
+
           <input
             type="text"
             name="title"
@@ -64,6 +80,7 @@ export default function TaskForm({ onTaskAdded }) {
           <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
             Description
           </label>
+
           <textarea
             rows="2"
             name="description"
@@ -79,6 +96,7 @@ export default function TaskForm({ onTaskAdded }) {
           <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
             Subject / Category
           </label>
+
           <input
             type="text"
             name="category"
@@ -95,6 +113,7 @@ export default function TaskForm({ onTaskAdded }) {
             <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
               Priority
             </label>
+
             <select
               name="priority"
               value={formData.priority}
@@ -111,6 +130,7 @@ export default function TaskForm({ onTaskAdded }) {
             <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
               Due Date
             </label>
+
             <input
               type="date"
               name="dueDate"
@@ -119,6 +139,34 @@ export default function TaskForm({ onTaskAdded }) {
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700"
             />
           </div>
+        </div>
+
+        {/* Estimated Study Time */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+            Estimated Study Time
+          </label>
+
+          <div className="relative">
+            <input
+              type="number"
+              name="estimated_minutes"
+              value={formData.estimated_minutes}
+              onChange={handleChange}
+              min="1"
+              placeholder="e.g., 60"
+              className="w-full px-3 py-2 pr-20 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              required
+            />
+
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              minutes
+            </span>
+          </div>
+
+          <p className="text-xs text-gray-400 mt-1">
+            How long do you expect this task to take?
+          </p>
         </div>
 
         {/* Submit Button */}

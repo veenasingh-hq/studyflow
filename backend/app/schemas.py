@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
+
 
 class TaskBase(BaseModel):
     title: str
@@ -7,9 +8,12 @@ class TaskBase(BaseModel):
     category: Optional[str] = "General"
     priority: Optional[str] = "medium"
     dueDate: Optional[str] = ""
+    estimated_minutes: Optional[int] = Field(default=30, ge=1)
+
 
 class TaskCreate(TaskBase):
     pass
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -17,7 +21,9 @@ class TaskUpdate(BaseModel):
     category: Optional[str] = None
     priority: Optional[str] = None
     dueDate: Optional[str] = None
+    estimated_minutes: Optional[int] = Field(default=None, ge=1)
     completed: Optional[bool] = None
+
 
 class TaskResponse(TaskBase):
     id: str
