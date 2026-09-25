@@ -6,6 +6,7 @@ import uuid
 
 from app.schemas import TaskCreate, TaskUpdate, TaskResponse
 from app import storage
+from app.priority import calculate_task_score, get_task_urgency
 
 app = FastAPI(
     title="StudyFlow API",
@@ -22,9 +23,24 @@ app.add_middleware(
 )
 
 
+def enrich_task(task):
+    """
+    Add calculated smart priority information to a task.
+    """
+    score = calculate_task_score(task)
+
+    return {
+        **task,
+        "priority_score": score,
+        "urgency": get_task_urgency(score)
+    }
+
+
 @app.get("/")
 def root():
-    return {"message": "Welcome to StudyFlow API! Visit /docs for endpoints."}
+    return {
+        "message": "Welcome to StudyFlow API! Visit /docs for endpoints."
+    }
 
 
 @app.get("/tasks", response_model=List[TaskResponse])
@@ -36,7 +52,10 @@ def get_tasks(
     tasks = storage.load_tasks()
 
     if completed is not None:
-        tasks = [task for task in tasks if task["completed"] == completed]
+        tasks = [
+            task for task in tasks
+            if task["completed"] == completed
+        ]
 
     if category:
         tasks = [
@@ -50,7 +69,7 @@ def get_tasks(
             if task["priority"].lower() == priority.lower()
         ]
 
-    return tasks
+    return [enrich_task(task) for task in tasks]
 
 
 @app.post(
@@ -90,7 +109,7 @@ def create_task(task_data: TaskCreate):
     tasks.append(new_task)
     storage.save_tasks(tasks)
 
-    return new_task
+    return enrich_task(new_task)
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
@@ -108,11 +127,14 @@ def get_task(task_id: str):
             detail="Task not found"
         )
 
-    return task
+    return enrich_task(task)
 
 
 @app.put("/tasks/{task_id}", response_model=TaskResponse)
-def update_task(task_id: str, task_update: TaskUpdate):
+def update_task(
+    task_id: str,
+    task_update: TaskUpdate
+):
     tasks = storage.load_tasks()
 
     task = next(
@@ -126,7 +148,9 @@ def update_task(task_id: str, task_update: TaskUpdate):
             detail="Task not found"
         )
 
-    update_data = task_update.model_dump(exclude_unset=True)
+    update_data = task_update.model_dump(
+        exclude_unset=True
+    )
 
     for key, value in update_data.items():
         if value is not None:
@@ -136,7 +160,7 @@ def update_task(task_id: str, task_update: TaskUpdate):
 
     storage.save_tasks(tasks)
 
-    return task
+    return enrich_task(task)
 
 
 @app.delete(
@@ -187,4 +211,4 @@ def toggle_task_completion(task_id: str):
 
     storage.save_tasks(tasks)
 
-    return task
+    return enrich_task(task)

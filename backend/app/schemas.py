@@ -21,7 +21,10 @@ class TaskUpdate(BaseModel):
     category: Optional[str] = None
     priority: Optional[str] = None
     dueDate: Optional[str] = None
-    estimated_minutes: Optional[int] = Field(default=None, ge=1)
+    estimated_minutes: Optional[int] = Field(
+        default=None,
+        ge=1
+    )
     completed: Optional[bool] = None
 
 
@@ -30,3 +33,5 @@ class TaskResponse(TaskBase):
     completed: bool
     created_at: str
     updated_at: str
+    priority_score: int
+    urgency: str
