@@ -16,7 +16,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,6 +39,41 @@ def enrich_task(task):
     }
 
 
+def sort_tasks(tasks, sort_by):
+    """
+    Sort tasks based on the selected sorting option.
+    """
+
+    enriched_tasks = [
+        enrich_task(task)
+        for task in tasks
+    ]
+
+    if sort_by == "priority":
+        return sorted(
+            enriched_tasks,
+            key=lambda task: task["priority_score"],
+            reverse=True
+        )
+
+    if sort_by == "deadline":
+        return sorted(
+            enriched_tasks,
+            key=lambda task: (
+                task["dueDate"] == "",
+                task["dueDate"]
+            )
+        )
+
+    if sort_by == "study_time":
+        return sorted(
+            enriched_tasks,
+            key=lambda task: task["estimated_minutes"]
+        )
+
+    return enriched_tasks
+
+
 @app.get("/")
 def root():
     return {
@@ -47,7 +85,8 @@ def root():
 def get_tasks(
     completed: Optional[bool] = None,
     category: Optional[str] = None,
-    priority: Optional[str] = None
+    priority: Optional[str] = None,
+    sort_by: Optional[str] = None
 ):
     tasks = storage.load_tasks()
 
@@ -69,7 +108,7 @@ def get_tasks(
             if task["priority"].lower() == priority.lower()
         ]
 
-    return [enrich_task(task) for task in tasks]
+    return sort_tasks(tasks, sort_by)
 
 
 @app.post(
@@ -99,7 +138,11 @@ def create_task(task_data: TaskCreate):
             if task_data.priority
             else "medium"
         ),
-        "dueDate": task_data.dueDate if task_data.dueDate else "",
+        "dueDate": (
+            task_data.dueDate
+            if task_data.dueDate
+            else ""
+        ),
         "estimated_minutes": task_data.estimated_minutes,
         "completed": False,
         "created_at": now,
@@ -112,7 +155,10 @@ def create_task(task_data: TaskCreate):
     return enrich_task(new_task)
 
 
-@app.get("/tasks/{task_id}", response_model=TaskResponse)
+@app.get(
+    "/tasks/{task_id}",
+    response_model=TaskResponse
+)
 def get_task(task_id: str):
     tasks = storage.load_tasks()
 
@@ -130,7 +176,10 @@ def get_task(task_id: str):
     return enrich_task(task)
 
 
-@app.put("/tasks/{task_id}", response_model=TaskResponse)
+@app.put(
+    "/tasks/{task_id}",
+    response_model=TaskResponse
+)
 def update_task(
     task_id: str,
     task_update: TaskUpdate

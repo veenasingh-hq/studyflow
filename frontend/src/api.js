@@ -1,39 +1,70 @@
-const API_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
-// Fetch all tasks
-export async function fetchTasks() {
-  const response = await fetch(`${API_URL}/tasks`);
-  if (!response.ok) throw new Error("Failed to fetch tasks");
-  return await response.json();
+export async function fetchTasks(sortBy = 'priority') {
+  const params = new URLSearchParams();
+
+  if (sortBy) {
+    params.append('sort_by', sortBy);
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/tasks?${params.toString()}`
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch tasks');
+  }
+
+  return response.json();
 }
 
-// Create new task
+
 export async function createTask(taskData) {
-  const response = await fetch(`${API_URL}/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch(`${API_BASE_URL}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(taskData),
   });
-  if (!response.ok) throw new Error("Failed to create task");
-  return await response.json();
+
+  if (!response.ok) {
+    throw new Error('Failed to create task');
+  }
+
+  return response.json();
 }
 
-// Update task (e.g., toggle completed status)
-export async function updateTask(taskId, updateData) {
-  const response = await fetch(`${API_URL}/tasks/${taskId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updateData),
-  });
-  if (!response.ok) throw new Error("Failed to update task");
-  return await response.json();
+
+export async function updateTask(taskId, taskData) {
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/${taskId}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(taskData),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to update task');
+  }
+
+  return response.json();
 }
 
-// Delete task
+
 export async function deleteTask(taskId) {
-  const response = await fetch(`${API_URL}/tasks/${taskId}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) throw new Error("Failed to delete task");
-  return true;
+  const response = await fetch(
+    `${API_BASE_URL}/tasks/${taskId}`,
+    {
+      method: 'DELETE',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to delete task');
+  }
 }

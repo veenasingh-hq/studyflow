@@ -15,13 +15,16 @@ export default function Dashboard() {
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
+  // Sorting State
+  const [sortBy, setSortBy] = useState('priority');
+
   // Load tasks from backend
-  const loadTasksData = async () => {
+  const loadTasksData = async (sortOption = sortBy) => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await fetchTasks();
+      const data = await fetchTasks(sortOption);
       setTasks(data);
     } catch (err) {
       console.error('Failed to load tasks:', err);
@@ -35,12 +38,22 @@ export default function Dashboard() {
     loadTasksData();
   }, []);
 
+  // Handle Sorting Change
+  const handleSortChange = async (event) => {
+    const newSort = event.target.value;
+
+    setSortBy(newSort);
+
+    await loadTasksData(newSort);
+  };
+
   // Add Task
   const handleAddTask = async (newTaskData) => {
     try {
       setError(null);
 
       const created = await createTask(newTaskData);
+
       setTasks((prev) => [created, ...prev]);
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -58,7 +71,9 @@ export default function Dashboard() {
       });
 
       setTasks((prev) =>
-        prev.map((task) => (task.id === taskId ? updated : task))
+        prev.map((task) =>
+          task.id === taskId ? updated : task
+        )
       );
     } catch (err) {
       console.error('Failed to update task:', err);
@@ -77,7 +92,9 @@ export default function Dashboard() {
 
       await deleteTask(taskId);
 
-      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+      setTasks((prev) =>
+        prev.filter((task) => task.id !== taskId)
+      );
     } catch (err) {
       console.error('Failed to delete task:', err);
       setError('Unable to delete the task. Please try again.');
@@ -115,7 +132,11 @@ export default function Dashboard() {
 
       const matchesStatus =
         selectedStatus === 'all' ||
-        (selectedStatus === 'completed' ? task.completed : !task.completed);
+        (
+          selectedStatus === 'completed'
+            ? task.completed
+            : !task.completed
+        );
 
       return (
         matchesSearch &&
@@ -134,11 +155,15 @@ export default function Dashboard() {
 
   // Statistics
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((task) => task.completed).length;
+  const completedTasks = tasks.filter(
+    (task) => task.completed
+  ).length;
+
   const pendingTasks = totalTasks - completedTasks;
 
   return (
     <div className="space-y-6">
+
       {/* Welcome Banner */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h1 className="text-2xl font-bold text-gray-800">
@@ -152,9 +177,13 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Total Tasks</p>
+            <p className="text-sm font-medium text-gray-500">
+              Total Tasks
+            </p>
+
             <p className="text-3xl font-bold text-gray-800 mt-1">
               {totalTasks}
             </p>
@@ -167,7 +196,10 @@ export default function Dashboard() {
 
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Pending</p>
+            <p className="text-sm font-medium text-gray-500">
+              Pending
+            </p>
+
             <p className="text-3xl font-bold text-amber-600 mt-1">
               {pendingTasks}
             </p>
@@ -180,7 +212,10 @@ export default function Dashboard() {
 
         <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Completed</p>
+            <p className="text-sm font-medium text-gray-500">
+              Completed
+            </p>
+
             <p className="text-3xl font-bold text-emerald-600 mt-1">
               {completedTasks}
             </p>
@@ -190,10 +225,12 @@ export default function Dashboard() {
             ✅
           </div>
         </div>
+
       </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
         {/* Task Form */}
         <div className="lg:col-span-1">
           <TaskForm onTaskAdded={handleAddTask} />
@@ -201,6 +238,7 @@ export default function Dashboard() {
 
         {/* Tasks */}
         <div className="lg:col-span-2 space-y-4">
+
           <FilterBar
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -213,7 +251,42 @@ export default function Dashboard() {
             categories={categories}
           />
 
+          {/* Sorting */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <div>
+              <p className="text-sm font-semibold text-gray-700">
+                Sort Tasks
+              </p>
+
+              <p className="text-xs text-gray-400 mt-1">
+                Choose how your tasks should be ordered.
+              </p>
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={handleSortChange}
+              className="px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="priority">
+                Smart Priority
+              </option>
+
+              <option value="deadline">
+                Deadline
+              </option>
+
+              <option value="study_time">
+                Study Time
+              </option>
+            </select>
+
+          </div>
+
+          {/* Task Heading */}
           <div className="flex items-center justify-between pt-2">
+
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
               <span>📋</span>
               Your Tasks ({filteredTasks.length})
@@ -227,11 +300,13 @@ export default function Dashboard() {
                 Showing filtered results
               </span>
             )}
+
           </div>
 
           {/* Error State */}
           {error && !loading && (
             <div className="bg-white p-6 rounded-xl text-center border-2 border-dashed border-red-200">
+
               <p className="text-lg font-medium text-red-600">
                 ⚠️ Something went wrong
               </p>
@@ -241,17 +316,19 @@ export default function Dashboard() {
               </p>
 
               <button
-                onClick={loadTasksData}
+                onClick={() => loadTasksData()}
                 className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
               >
                 Try Again
               </button>
+
             </div>
           )}
 
           {/* Loading State */}
           {loading ? (
             <div className="bg-white p-8 rounded-xl text-center text-gray-400 border-2 border-dashed border-gray-200">
+
               <p className="text-lg font-medium text-gray-600">
                 Loading tasks... ⏳
               </p>
@@ -259,9 +336,12 @@ export default function Dashboard() {
               <p className="text-sm text-gray-400 mt-1">
                 Loading tasks from server...
               </p>
+
             </div>
           ) : error ? null : filteredTasks.length === 0 ? (
+
             <div className="bg-white p-8 rounded-xl text-center text-gray-400 border-2 border-dashed border-gray-200">
+
               <p className="text-lg font-medium text-gray-600">
                 No matching tasks found!
               </p>
@@ -273,9 +353,13 @@ export default function Dashboard() {
               <p className="text-sm text-gray-400 mt-1">
                 Add your first task using the form on the left.
               </p>
+
             </div>
+
           ) : (
+
             <div className="space-y-4">
+
               {filteredTasks.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -284,8 +368,11 @@ export default function Dashboard() {
                   onDeleteTask={handleDeleteTask}
                 />
               ))}
+
             </div>
+
           )}
+
         </div>
       </div>
     </div>
