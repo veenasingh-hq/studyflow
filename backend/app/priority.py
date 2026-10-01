@@ -1,59 +1,82 @@
-"""Business logic for ranking StudyFlow tasks."""
+"""Business logic for calculating StudyFlow task priority."""
 
-from __future__ import annotations
-
-from datetime import date
-from typing import Any, Iterable
+from datetime import datetime
 
 
-class Priority:
-   """Calculate task priority and select the next task to study.
+PRIORITY_SCORES = {
+    "high": 30,
+    "medium": 20,
+    "low": 10,
+}
 
-   
-   Tasks can be dictionaries or objects. Supported fields are ``due_date``
-   (an ISO date or :class:`date`), ``importance``, ``difficulty``, and
-   ``completed``.
-   """
 
-   @staticmethod
-   def _value(task: Any, name: str, default: Any = None) -> Any:
-      if isinstance(task, dict):
-         return task.get(name, default)
-      return getattr(task, name, default)
+def calculate_task_score(task):
+    """
+    Calculate a smart priority score for a StudyFlow task.
 
-   @classmethod
-   def priority(cls, task: Any, *, today: date | None = None) -> float:
-      """Return a higher score for tasks that deserve earlier attention."""
-      if cls._value(task, "completed", False):
-         return float("-inf")
+    Higher score means the task needs more attention.
+    """
 
-      today = today or date.today()
-      due = cls._value(task, "due_date")
-      if isinstance(due, str):
-         try:
-            due = date.fromisoformat(due)
-         except ValueError:
-            due = None
-      days_left = (due - today).days if isinstance(due, date) else 30
-      urgency = 100.0 if days_left <= 0 else max(0.0, 30.0 - days_left)
+    score = 0
 
-      def score(name: str) -> float:
-         try:
-            return max(0.0, min(10.0, float(cls._value(task, name, 0))))
-         except (TypeError, ValueError):
-            return 0.0
+    # Priority
+    priority = task.get("priority", "medium").lower()
+    score += PRIORITY_SCORES.get(priority, 20)
 
-      return urgency * 2.0 + score("importance") * 5.0 + score("difficulty") * 2.0
+    # Deadline urgency
+    due_date = task.get("dueDate")
 
-   @classmethod
-   def rank(cls, tasks: Iterable[Any], *, today: date | None = None) -> list[Any]:
-      """Return tasks sorted from highest to lowest priority."""
-      return sorted(tasks, key=lambda task: cls.priority(task, today=today), reverse=True)
+    if due_date:
+        try:
+            due = datetime.strptime(due_date, "%Y-%m-%d").date()
+            today = datetime.now().date()
+            days_remaining = (due - today).days
 
-   @classmethod
-   def next_task(cls, tasks: Iterable[Any], *, today: date | None = None) -> Any | None:
-      """Return the highest-priority incomplete task, if one exists."""
-      for task in cls.rank(tasks, today=today):
-         if not cls._value(task, "completed", False):
-            return task
-      return None
+            if days_remaining < 0:
+                score += 50
+            elif days_remaining == 0:
+                score += 45
+            elif days_remaining == 1:
+                score += 40
+            elif days_remaining <= 3:
+                score += 30
+            elif days_remaining <= 7:
+                score += 20
+            else:
+                score += 5
+
+        except ValueError:
+            pass
+
+    # Estimated study time
+    estimated_minutes = task.get("estimated_minutes", 30)
+
+    if estimated_minutes >= 120:
+        score += 15
+    elif estimated_minutes >= 60:
+        score += 10
+    elif estimated_minutes >= 30:
+        score += 5
+
+    # Completed tasks should not receive priority
+    if task.get("completed", False):
+        score = 0
+
+    return score
+
+
+def get_task_urgency(score):
+    """
+    Convert a numerical priority score into an urgency level.
+    """
+
+    if score >= 80:
+        return "critical"
+
+    if score >= 60:
+        return "high"
+
+    if score >= 40:
+        return "medium"
+
+    return "low"

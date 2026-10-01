@@ -16,10 +16,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,9 +24,7 @@ app.add_middleware(
 
 
 def enrich_task(task):
-    """
-    Add calculated smart priority information to a task.
-    """
+    """Add calculated smart priority information to a task."""
     score = calculate_task_score(task)
 
     return {
@@ -37,41 +32,6 @@ def enrich_task(task):
         "priority_score": score,
         "urgency": get_task_urgency(score)
     }
-
-
-def sort_tasks(tasks, sort_by):
-    """
-    Sort tasks based on the selected sorting option.
-    """
-
-    enriched_tasks = [
-        enrich_task(task)
-        for task in tasks
-    ]
-
-    if sort_by == "priority":
-        return sorted(
-            enriched_tasks,
-            key=lambda task: task["priority_score"],
-            reverse=True
-        )
-
-    if sort_by == "deadline":
-        return sorted(
-            enriched_tasks,
-            key=lambda task: (
-                task["dueDate"] == "",
-                task["dueDate"]
-            )
-        )
-
-    if sort_by == "study_time":
-        return sorted(
-            enriched_tasks,
-            key=lambda task: task["estimated_minutes"]
-        )
-
-    return enriched_tasks
 
 
 @app.get("/")
@@ -108,7 +68,31 @@ def get_tasks(
             if task["priority"].lower() == priority.lower()
         ]
 
-    return sort_tasks(tasks, sort_by)
+    enriched_tasks = [
+        enrich_task(task)
+        for task in tasks
+    ]
+
+    if sort_by == "priority":
+        enriched_tasks.sort(
+            key=lambda task: task["priority_score"],
+            reverse=True
+        )
+
+    elif sort_by == "deadline":
+        enriched_tasks.sort(
+            key=lambda task: (
+                task["dueDate"] == "",
+                task["dueDate"]
+            )
+        )
+
+    elif sort_by == "study_time":
+        enriched_tasks.sort(
+            key=lambda task: task["estimated_minutes"]
+        )
+
+    return enriched_tasks
 
 
 @app.post(
@@ -138,11 +122,7 @@ def create_task(task_data: TaskCreate):
             if task_data.priority
             else "medium"
         ),
-        "dueDate": (
-            task_data.dueDate
-            if task_data.dueDate
-            else ""
-        ),
+        "dueDate": task_data.dueDate if task_data.dueDate else "",
         "estimated_minutes": task_data.estimated_minutes,
         "completed": False,
         "created_at": now,
@@ -155,10 +135,7 @@ def create_task(task_data: TaskCreate):
     return enrich_task(new_task)
 
 
-@app.get(
-    "/tasks/{task_id}",
-    response_model=TaskResponse
-)
+@app.get("/tasks/{task_id}", response_model=TaskResponse)
 def get_task(task_id: str):
     tasks = storage.load_tasks()
 
@@ -176,10 +153,7 @@ def get_task(task_id: str):
     return enrich_task(task)
 
 
-@app.put(
-    "/tasks/{task_id}",
-    response_model=TaskResponse
-)
+@app.put("/tasks/{task_id}", response_model=TaskResponse)
 def update_task(
     task_id: str,
     task_update: TaskUpdate

@@ -9,26 +9,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filter States
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedPriority, setSelectedPriority] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('');
+  const [sortBy, setSortBy] = useState('');
 
-  // Sorting State
-  const [sortBy, setSortBy] = useState('priority');
-
-  // Load tasks from backend
-  const loadTasksData = async (sortOption = sortBy) => {
+  const loadTasksData = async (selectedSort = sortBy) => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await fetchTasks(sortOption);
+      const data = await fetchTasks(selectedSort);
       setTasks(data);
     } catch (err) {
-      console.error('Failed to load tasks:', err);
-      setError('Unable to connect to the StudyFlow server.');
+      setError('Unable to load tasks. Please check if the backend is running.');
     } finally {
       setLoading(false);
     }
@@ -36,344 +31,259 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTasksData();
-  }, []);
+  }, [sortBy]);
 
-  // Handle Sorting Change
-  const handleSortChange = async (event) => {
-    const newSort = event.target.value;
-
-    setSortBy(newSort);
-
-    await loadTasksData(newSort);
-  };
-
-  // Add Task
-  const handleAddTask = async (newTaskData) => {
+  const handleAddTask = async (taskData) => {
     try {
       setError(null);
 
-      const created = await createTask(newTaskData);
+      const newTask = await createTask(taskData);
 
-      setTasks((prev) => [created, ...prev]);
+      setTasks((currentTasks) => [...currentTasks, newTask]);
     } catch (err) {
-      console.error('Failed to create task:', err);
-      setError('Unable to create the task. Please try again.');
+      setError('Unable to create task.');
     }
   };
 
-  // Toggle Completion
-  const handleToggleComplete = async (taskId, currentStatus) => {
+  const handleToggleComplete = async (task) => {
     try {
       setError(null);
 
-      const updated = await updateTask(taskId, {
-        completed: !currentStatus,
+      const updatedTask = await updateTask(task.id, {
+        completed: !task.completed,
       });
 
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === taskId ? updated : task
+      setTasks((currentTasks) =>
+        currentTasks.map((item) =>
+          item.id === task.id ? updatedTask : item
         )
       );
     } catch (err) {
-      console.error('Failed to update task:', err);
-      setError('Unable to update the task. Please try again.');
+      setError('Unable to update task.');
     }
   };
 
-  // Delete Task
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) {
-      return;
-    }
-
     try {
       setError(null);
 
       await deleteTask(taskId);
 
-      setTasks((prev) =>
-        prev.filter((task) => task.id !== taskId)
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== taskId)
       );
     } catch (err) {
-      console.error('Failed to delete task:', err);
-      setError('Unable to delete the task. Please try again.');
+      setError('Unable to delete task.');
     }
   };
 
-  // Extract unique categories dynamically
-  const categories = useMemo(() => {
-    const cats = tasks
-      .map((task) => task.category?.trim().toLowerCase())
-      .filter(Boolean);
-
-    return Array.from(new Set(cats));
-  }, [tasks]);
-
-  // Client-side filtering
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const title = task.title?.toLowerCase() || '';
       const description = task.description?.toLowerCase() || '';
-      const priority = task.priority?.toLowerCase() || '';
-      const category = task.category?.toLowerCase() || '';
 
       const matchesSearch =
-        title.includes(searchQuery.toLowerCase()) ||
-        description.includes(searchQuery.toLowerCase());
-
-      const matchesPriority =
-        selectedPriority === 'all' ||
-        priority === selectedPriority.toLowerCase();
+        title.includes(search.toLowerCase()) ||
+        description.includes(search.toLowerCase());
 
       const matchesCategory =
-        selectedCategory === 'all' ||
-        category === selectedCategory.toLowerCase();
+        !category || task.category === category;
+
+      const matchesPriority =
+        !priority || task.priority === priority;
 
       const matchesStatus =
-        selectedStatus === 'all' ||
-        (
-          selectedStatus === 'completed'
-            ? task.completed
-            : !task.completed
-        );
+        !status ||
+        (status === 'completed' && task.completed) ||
+        (status === 'pending' && !task.completed);
 
       return (
         matchesSearch &&
-        matchesPriority &&
         matchesCategory &&
+        matchesPriority &&
         matchesStatus
       );
     });
-  }, [
-    tasks,
-    searchQuery,
-    selectedPriority,
-    selectedCategory,
-    selectedStatus,
-  ]);
+  }, [tasks, search, category, priority, status]);
 
-  // Statistics
   const totalTasks = tasks.length;
+
   const completedTasks = tasks.filter(
     (task) => task.completed
   ).length;
 
   const pendingTasks = totalTasks - completedTasks;
 
-  return (
-    <div className="space-y-6">
+  const completionRate =
+    totalTasks > 0
+      ? Math.round((completedTasks / totalTasks) * 100)
+      : 0;
 
-      {/* Welcome Banner */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Welcome Back, Student! 👋
+  const categories = [
+    ...new Set(
+      tasks
+        .map((task) => task.category)
+        .filter(Boolean)
+    ),
+  ];
+
+  return (
+    <div className="space-y-8">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Study Dashboard
         </h1>
 
-        <p className="text-gray-500 mt-1">
-          Here is a quick overview of your daily study goals and tasks.
+        <p className="mt-2 text-gray-600">
+          Organize your study tasks and stay focused.
         </p>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="flex items-center justify-between gap-4">
+            <span>{error}</span>
+
+            <button
+              onClick={() => loadTasksData()}
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">
-              Total Tasks
-            </p>
-
-            <p className="text-3xl font-bold text-gray-800 mt-1">
-              {totalTasks}
-            </p>
-          </div>
-
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-xl font-bold">
-            📋
-          </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+          <p className="text-sm text-gray-500">Total Tasks</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900">
+            {totalTasks}
+          </p>
         </div>
 
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">
-              Pending
-            </p>
-
-            <p className="text-3xl font-bold text-amber-600 mt-1">
-              {pendingTasks}
-            </p>
-          </div>
-
-          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center text-xl font-bold">
-            ⏳
-          </div>
+        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+          <p className="text-sm text-gray-500">Completed</p>
+          <p className="mt-2 text-3xl font-bold text-green-600">
+            {completedTasks}
+          </p>
         </div>
 
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">
-              Completed
-            </p>
-
-            <p className="text-3xl font-bold text-emerald-600 mt-1">
-              {completedTasks}
-            </p>
-          </div>
-
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center text-xl font-bold">
-            ✅
-          </div>
+        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+          <p className="text-sm text-gray-500">Pending</p>
+          <p className="mt-2 text-3xl font-bold text-orange-600">
+            {pendingTasks}
+          </p>
         </div>
 
+        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+          <p className="text-sm text-gray-500">Completion Rate</p>
+          <p className="mt-2 text-3xl font-bold text-blue-600">
+            {completionRate}%
+          </p>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Add Task */}
+      <TaskForm onSubmit={handleAddTask} />
 
-        {/* Task Form */}
-        <div className="lg:col-span-1">
-          <TaskForm onTaskAdded={handleAddTask} />
-        </div>
+      {/* Filters + Sorting */}
+      <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 
-        {/* Tasks */}
-        <div className="lg:col-span-2 space-y-4">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Find Tasks
+            </h2>
 
-          <FilterBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            selectedPriority={selectedPriority}
-            setSelectedPriority={setSelectedPriority}
-            selectedStatus={selectedStatus}
-            setSelectedStatus={setSelectedStatus}
-            categories={categories}
-          />
+            <p className="text-sm text-gray-500">
+              Search and filter your study tasks.
+            </p>
+          </div>
 
-          {/* Sorting */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
-            <div>
-              <p className="text-sm font-semibold text-gray-700">
-                Sort Tasks
-              </p>
-
-              <p className="text-xs text-gray-400 mt-1">
-                Choose how your tasks should be ordered.
-              </p>
-            </div>
+          {/* Sort By */}
+          <div className="w-full lg:w-56">
+            <label
+              htmlFor="sortBy"
+              className="mb-2 block text-sm font-medium text-gray-700"
+            >
+              Sort By
+            </label>
 
             <select
+              id="sortBy"
               value={sortBy}
-              onChange={handleSortChange}
-              className="px-4 py-2 border border-gray-200 rounded-lg bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onChange={(event) => setSortBy(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             >
+              <option value="">Default Order</option>
               <option value="priority">
                 Smart Priority
               </option>
-
               <option value="deadline">
-                Deadline
+                Nearest Deadline
               </option>
-
               <option value="study_time">
-                Study Time
+                Shortest Study Time
               </option>
             </select>
-
           </div>
-
-          {/* Task Heading */}
-          <div className="flex items-center justify-between pt-2">
-
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span>📋</span>
-              Your Tasks ({filteredTasks.length})
-            </h2>
-
-            {(searchQuery ||
-              selectedCategory !== 'all' ||
-              selectedPriority !== 'all' ||
-              selectedStatus !== 'all') && (
-              <span className="text-xs text-indigo-600 font-medium">
-                Showing filtered results
-              </span>
-            )}
-
-          </div>
-
-          {/* Error State */}
-          {error && !loading && (
-            <div className="bg-white p-6 rounded-xl text-center border-2 border-dashed border-red-200">
-
-              <p className="text-lg font-medium text-red-600">
-                ⚠️ Something went wrong
-              </p>
-
-              <p className="text-sm text-gray-500 mt-2">
-                {error}
-              </p>
-
-              <button
-                onClick={() => loadTasksData()}
-                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-              >
-                Try Again
-              </button>
-
-            </div>
-          )}
-
-          {/* Loading State */}
-          {loading ? (
-            <div className="bg-white p-8 rounded-xl text-center text-gray-400 border-2 border-dashed border-gray-200">
-
-              <p className="text-lg font-medium text-gray-600">
-                Loading tasks... ⏳
-              </p>
-
-              <p className="text-sm text-gray-400 mt-1">
-                Loading tasks from server...
-              </p>
-
-            </div>
-          ) : error ? null : filteredTasks.length === 0 ? (
-
-            <div className="bg-white p-8 rounded-xl text-center text-gray-400 border-2 border-dashed border-gray-200">
-
-              <p className="text-lg font-medium text-gray-600">
-                No matching tasks found!
-              </p>
-
-              <p className="text-sm text-gray-400 mt-1">
-                Try resetting your filters or search term.
-              </p>
-
-              <p className="text-sm text-gray-400 mt-1">
-                Add your first task using the form on the left.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="space-y-4">
-
-              {filteredTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onToggleComplete={handleToggleComplete}
-                  onDeleteTask={handleDeleteTask}
-                />
-              ))}
-
-            </div>
-
-          )}
-
         </div>
+
+        <FilterBar
+          search={search}
+          setSearch={setSearch}
+          category={category}
+          setCategory={setCategory}
+          priority={priority}
+          setPriority={setPriority}
+          status={status}
+          setStatus={setStatus}
+          categories={categories}
+        />
+      </div>
+
+      {/* Task List */}
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Your Tasks
+          </h2>
+
+          <span className="text-sm text-gray-500">
+            {filteredTasks.length} task
+            {filteredTasks.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-gray-200">
+            <p className="text-gray-500">
+              Loading tasks...
+            </p>
+          </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-gray-200">
+            <p className="text-gray-500">
+              No tasks found.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredTasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggleComplete={handleToggleComplete}
+                onDelete={handleDeleteTask}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
