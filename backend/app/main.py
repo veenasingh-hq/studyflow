@@ -16,7 +16,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +28,7 @@ app.add_middleware(
 
 def enrich_task(task):
     """Add calculated smart priority information to a task."""
+
     score = calculate_task_score(task)
 
     return {
@@ -32,6 +36,29 @@ def enrich_task(task):
         "priority_score": score,
         "urgency": get_task_urgency(score)
     }
+
+
+def calculate_next_task(tasks):
+    """Return the highest-priority incomplete task."""
+
+    incomplete_tasks = [
+        task
+        for task in tasks
+        if not task.get("completed", False)
+    ]
+
+    if not incomplete_tasks:
+        return None
+
+    enriched_tasks = [
+        enrich_task(task)
+        for task in incomplete_tasks
+    ]
+
+    return max(
+        enriched_tasks,
+        key=lambda task: task["priority_score"]
+    )
 
 
 @app.get("/")
@@ -52,20 +79,25 @@ def get_tasks(
 
     if completed is not None:
         tasks = [
-            task for task in tasks
-            if task["completed"] == completed
+            task
+            for task in tasks
+            if task.get("completed", False) == completed
         ]
 
     if category:
         tasks = [
-            task for task in tasks
-            if task["category"].lower() == category.lower()
+            task
+            for task in tasks
+            if task.get("category", "General").lower()
+            == category.lower()
         ]
 
     if priority:
         tasks = [
-            task for task in tasks
-            if task["priority"].lower() == priority.lower()
+            task
+            for task in tasks
+            if task.get("priority", "medium").lower()
+            == priority.lower()
         ]
 
     enriched_tasks = [
@@ -82,17 +114,32 @@ def get_tasks(
     elif sort_by == "deadline":
         enriched_tasks.sort(
             key=lambda task: (
-                task["dueDate"] == "",
-                task["dueDate"]
+                task.get("dueDate", "") == "",
+                task.get("dueDate", "")
             )
         )
 
     elif sort_by == "study_time":
         enriched_tasks.sort(
-            key=lambda task: task["estimated_minutes"]
+            key=lambda task: task.get(
+                "estimated_minutes",
+                30
+            )
         )
 
     return enriched_tasks
+
+
+@app.get(
+    "/tasks/next",
+    response_model=Optional[TaskResponse]
+)
+def get_next_task():
+    """Return the highest-priority incomplete task."""
+
+    tasks = storage.load_tasks()
+
+    return calculate_next_task(tasks)
 
 
 @app.post(
@@ -122,7 +169,11 @@ def create_task(task_data: TaskCreate):
             if task_data.priority
             else "medium"
         ),
-        "dueDate": task_data.dueDate if task_data.dueDate else "",
+        "dueDate": (
+            task_data.dueDate
+            if task_data.dueDate
+            else ""
+        ),
         "estimated_minutes": task_data.estimated_minutes,
         "completed": False,
         "created_at": now,
@@ -135,12 +186,19 @@ def create_task(task_data: TaskCreate):
     return enrich_task(new_task)
 
 
-@app.get("/tasks/{task_id}", response_model=TaskResponse)
+@app.get(
+    "/tasks/{task_id}",
+    response_model=TaskResponse
+)
 def get_task(task_id: str):
     tasks = storage.load_tasks()
 
     task = next(
-        (t for t in tasks if t["id"] == task_id),
+        (
+            task
+            for task in tasks
+            if task["id"] == task_id
+        ),
         None
     )
 
@@ -153,7 +211,10 @@ def get_task(task_id: str):
     return enrich_task(task)
 
 
-@app.put("/tasks/{task_id}", response_model=TaskResponse)
+@app.put(
+    "/tasks/{task_id}",
+    response_model=TaskResponse
+)
 def update_task(
     task_id: str,
     task_update: TaskUpdate
@@ -161,7 +222,11 @@ def update_task(
     tasks = storage.load_tasks()
 
     task = next(
-        (t for t in tasks if t["id"] == task_id),
+        (
+            task
+            for task in tasks
+            if task["id"] == task_id
+        ),
         None
     )
 
@@ -196,8 +261,9 @@ def delete_task(task_id: str):
     initial_len = len(tasks)
 
     tasks = [
-        t for t in tasks
-        if t["id"] != task_id
+        task
+        for task in tasks
+        if task["id"] != task_id
     ]
 
     if len(tasks) == initial_len:
@@ -219,7 +285,11 @@ def toggle_task_completion(task_id: str):
     tasks = storage.load_tasks()
 
     task = next(
-        (t for t in tasks if t["id"] == task_id),
+        (
+            task
+            for task in tasks
+            if task["id"] == task_id
+        ),
         None
     )
 

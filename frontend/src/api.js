@@ -14,6 +14,16 @@ export async function fetchTasks(sortBy = "") {
   return await response.json();
 }
 
+export async function fetchNextTask() {
+  const response = await fetch(`${API_URL}/tasks/next`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch next task");
+  }
+
+  return await response.json();
+}
+
 export async function createTask(taskData) {
   const response = await fetch(`${API_URL}/tasks`, {
     method: "POST",
