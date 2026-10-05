@@ -5,17 +5,36 @@ import FilterBar from './FilterBar';
 import {
   fetchTasks,
   fetchNextTask,
+  fetchTaskStats,
   createTask,
   updateTask,
   deleteTask,
 } from '../api';
 
+function formatStudyTime(minutes = 0) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes} min`;
+  }
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [nextTask, setNextTask] = useState(null);
+  const [stats, setStats] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [nextTaskLoading, setNextTaskLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const [error, setError] = useState(null);
 
   const [search, setSearch] = useState('');
@@ -53,12 +72,26 @@ export default function Dashboard() {
     }
   };
 
+  const loadTaskStats = async () => {
+    try {
+      setStatsLoading(true);
+
+      const data = await fetchTaskStats();
+      setStats(data);
+    } catch (err) {
+      setStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadTasksData();
   }, [sortBy]);
 
   useEffect(() => {
     loadNextTask();
+    loadTaskStats();
   }, [tasks]);
 
   const handleAddTask = async (taskData) => {
@@ -154,22 +187,6 @@ export default function Dashboard() {
     status,
   ]);
 
-  const totalTasks = tasks.length;
-
-  const completedTasks = tasks.filter(
-    (task) => task.completed
-  ).length;
-
-  const pendingTasks =
-    totalTasks - completedTasks;
-
-  const completionRate =
-    totalTasks > 0
-      ? Math.round(
-          (completedTasks / totalTasks) * 100
-        )
-      : 0;
-
   const categories = [
     ...new Set(
       tasks
@@ -208,6 +225,7 @@ export default function Dashboard() {
               onClick={() => {
                 loadTasksData();
                 loadNextTask();
+                loadTaskStats();
               }}
               className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
             >
@@ -290,7 +308,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Stats */}
+      {/* Basic Stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
@@ -299,7 +317,7 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {totalTasks}
+            {statsLoading ? '...' : stats?.total_tasks ?? 0}
           </p>
         </div>
 
@@ -309,7 +327,7 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-green-600">
-            {completedTasks}
+            {statsLoading ? '...' : stats?.completed_tasks ?? 0}
           </p>
         </div>
 
@@ -319,7 +337,7 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-orange-600">
-            {pendingTasks}
+            {statsLoading ? '...' : stats?.pending_tasks ?? 0}
           </p>
         </div>
 
@@ -329,9 +347,80 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-blue-600">
-            {completionRate}%
+            {statsLoading
+              ? '...'
+              : `${stats?.completion_percentage ?? 0}%`}
           </p>
         </div>
+
+      </div>
+
+      {/* Study Analytics */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            📊 Study Analytics
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-500">
+            Understand your workload and study progress.
+          </p>
+        </div>
+
+        {statsLoading ? (
+          <div className="py-8 text-center text-gray-500">
+            Loading study analytics...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+            <div className="rounded-xl bg-slate-50 p-5">
+              <p className="text-sm text-gray-500">
+                Total Study Time
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {formatStudyTime(
+                  stats?.total_study_minutes ?? 0
+                )}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-5">
+              <p className="text-sm text-gray-500">
+                Pending Study Time
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-orange-600">
+                {formatStudyTime(
+                  stats?.pending_study_minutes ?? 0
+                )}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-5">
+              <p className="text-sm text-gray-500">
+                Critical Tasks
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-red-600">
+                {stats?.critical_tasks ?? 0}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-5">
+              <p className="text-sm text-gray-500">
+                High Urgency
+              </p>
+
+              <p className="mt-2 text-2xl font-bold text-yellow-600">
+                {stats?.high_urgency_tasks ?? 0}
+              </p>
+            </div>
+
+          </div>
+        )}
 
       </div>
 

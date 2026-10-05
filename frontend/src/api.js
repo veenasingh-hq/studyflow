@@ -24,6 +24,16 @@ export async function fetchNextTask() {
   return await response.json();
 }
 
+export async function fetchTaskStats() {
+  const response = await fetch(`${API_URL}/tasks/stats`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch task statistics");
+  }
+
+  return await response.json();
+}
+
 export async function createTask(taskData) {
   const response = await fetch(`${API_URL}/tasks`, {
     method: "POST",

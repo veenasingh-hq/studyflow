@@ -7,12 +7,15 @@ import uuid
 from app.schemas import TaskCreate, TaskUpdate, TaskResponse
 from app import storage
 from app.priority import calculate_task_score, get_task_urgency
+from app.analytics import calculate_task_stats
+
 
 app = FastAPI(
     title="StudyFlow API",
     description="Backend API for StudyFlow Student Productivity App",
     version="1.0.0"
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -140,6 +143,20 @@ def get_next_task():
     tasks = storage.load_tasks()
 
     return calculate_next_task(tasks)
+
+
+@app.get("/tasks/stats")
+def get_task_stats():
+    """Return study productivity statistics."""
+
+    tasks = storage.load_tasks()
+
+    enriched_tasks = [
+        enrich_task(task)
+        for task in tasks
+    ]
+
+    return calculate_task_stats(enriched_tasks)
 
 
 @app.post(
