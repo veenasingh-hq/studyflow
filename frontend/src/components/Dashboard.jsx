@@ -52,6 +52,7 @@ export default function Dashboard() {
       setTasks(data);
     } catch (err) {
       setError(
+        err.message ||
         'Unable to load tasks. Please check if the backend is running.'
       );
     } finally {
@@ -105,7 +106,37 @@ export default function Dashboard() {
         newTask,
       ]);
     } catch (err) {
-      setError('Unable to create task.');
+      setError(
+        err.message || 'Unable to create task.'
+      );
+    }
+  };
+
+  const handleEditTask = async (
+    taskId,
+    updateData
+  ) => {
+    try {
+      setError(null);
+
+      const updatedTask = await updateTask(
+        taskId,
+        updateData
+      );
+
+      setTasks((currentTasks) =>
+        currentTasks.map((item) =>
+          item.id === taskId
+            ? updatedTask
+            : item
+        )
+      );
+    } catch (err) {
+      setError(
+        err.message || 'Unable to update task.'
+      );
+
+      throw err;
     }
   };
 
@@ -125,7 +156,9 @@ export default function Dashboard() {
         )
       );
     } catch (err) {
-      setError('Unable to update task.');
+      setError(
+        err.message || 'Unable to update task.'
+      );
     }
   };
 
@@ -141,7 +174,9 @@ export default function Dashboard() {
         )
       );
     } catch (err) {
-      setError('Unable to delete task.');
+      setError(
+        err.message || 'Unable to delete task.'
+      );
     }
   };
 
@@ -317,7 +352,9 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {statsLoading ? '...' : stats?.total_tasks ?? 0}
+            {statsLoading
+              ? '...'
+              : stats?.total_tasks ?? 0}
           </p>
         </div>
 
@@ -327,7 +364,9 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-green-600">
-            {statsLoading ? '...' : stats?.completed_tasks ?? 0}
+            {statsLoading
+              ? '...'
+              : stats?.completed_tasks ?? 0}
           </p>
         </div>
 
@@ -337,7 +376,9 @@ export default function Dashboard() {
           </p>
 
           <p className="mt-2 text-3xl font-bold text-orange-600">
-            {statsLoading ? '...' : stats?.pending_tasks ?? 0}
+            {statsLoading
+              ? '...'
+              : stats?.pending_tasks ?? 0}
           </p>
         </div>
 
@@ -442,7 +483,6 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Sort By */}
           <div className="w-full lg:w-56">
             <label
               htmlFor="sortBy"
@@ -529,7 +569,12 @@ export default function Dashboard() {
                 onToggleComplete={
                   handleToggleComplete
                 }
-                onDelete={handleDeleteTask}
+                onDeleteTask={
+                  handleDeleteTask
+                }
+                onEditTask={
+                  handleEditTask
+                }
               />
             ))}
           </div>
