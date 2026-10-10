@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function TaskCard({
   task,
   onToggleComplete,
   onDeleteTask,
-  onEditTask
+  onEditTask,
+  startEditing = false
 }) {
   const {
     id,
@@ -17,7 +18,7 @@ export default function TaskCard({
     estimated_minutes
   } = task;
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startEditing);
 
   const [editData, setEditData] = useState({
     title: title || '',
@@ -27,6 +28,30 @@ export default function TaskCard({
     dueDate: dueDate || '',
     estimated_minutes: estimated_minutes || 30
   });
+
+  useEffect(() => {
+    setEditData({
+      title: title || '',
+      description: description || '',
+      category: category || 'General',
+      priority: priority || 'medium',
+      dueDate: dueDate || '',
+      estimated_minutes: estimated_minutes || 30
+    });
+  }, [
+    title,
+    description,
+    category,
+    priority,
+    dueDate,
+    estimated_minutes
+  ]);
+
+  useEffect(() => {
+    if (startEditing) {
+      setIsEditing(true);
+    }
+  }, [startEditing]);
 
   const priorityStyles = {
     high: "bg-red-50 text-red-600 border-red-100",
@@ -77,10 +102,8 @@ export default function TaskCard({
           : 'border-gray-100'
       } shadow-sm hover:shadow-md transition-all relative space-y-3`}
     >
-
       {isEditing ? (
         <>
-          {/* Edit Header */}
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               Edit Task
@@ -94,7 +117,6 @@ export default function TaskCard({
             </button>
           </div>
 
-          {/* Title */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Title
@@ -109,7 +131,6 @@ export default function TaskCard({
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Description
@@ -124,9 +145,7 @@ export default function TaskCard({
             />
           </div>
 
-          {/* Category + Priority */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Category
@@ -152,25 +171,14 @@ export default function TaskCard({
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
-                <option value="low">
-                  Low
-                </option>
-
-                <option value="medium">
-                  Medium
-                </option>
-
-                <option value="high">
-                  High
-                </option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
               </select>
             </div>
-
           </div>
 
-          {/* Due Date + Study Time */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Due Date
@@ -199,12 +207,9 @@ export default function TaskCard({
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
-
           </div>
 
-          {/* Save / Cancel */}
           <div className="flex justify-end gap-2 pt-2">
-
             <button
               onClick={handleCancel}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -218,12 +223,10 @@ export default function TaskCard({
             >
               Save Changes
             </button>
-
           </div>
         </>
       ) : (
         <>
-          {/* Top badges row */}
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
               📚 {category || 'General'}
@@ -238,7 +241,6 @@ export default function TaskCard({
             </span>
           </div>
 
-          {/* Task Content */}
           <div>
             <h3
               className={`font-semibold text-gray-800 text-base ${
@@ -257,14 +259,10 @@ export default function TaskCard({
             )}
           </div>
 
-          {/* Study Information */}
           <div className="flex items-center gap-4 text-xs text-gray-500">
             <div className="flex items-center gap-1">
               <span>⏱️</span>
-
-              <span>
-                {estimated_minutes || 30} min
-              </span>
+              <span>{estimated_minutes || 30} min</span>
             </div>
 
             <div className="flex items-center gap-1">
@@ -278,9 +276,7 @@ export default function TaskCard({
             </div>
           </div>
 
-          {/* Footer Info & Actions */}
           <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-
             <div className="flex items-center gap-1">
               {completed ? (
                 <>
@@ -295,9 +291,7 @@ export default function TaskCard({
               )}
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-2">
-
               <button
                 onClick={() => setIsEditing(true)}
                 className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
@@ -307,9 +301,7 @@ export default function TaskCard({
               </button>
 
               <button
-                onClick={() =>
-                  onToggleComplete(id, completed)
-                }
+                onClick={() => onToggleComplete(task)}
                 className={`p-1.5 rounded-md transition-colors ${
                   completed
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
@@ -331,12 +323,10 @@ export default function TaskCard({
               >
                 🗑️
               </button>
-
             </div>
           </div>
         </>
       )}
-
     </div>
   );
 }
