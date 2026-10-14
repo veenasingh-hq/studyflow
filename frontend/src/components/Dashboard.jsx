@@ -27,6 +27,64 @@ function formatStudyTime(minutes = 0) {
   return `${hours}h ${remainingMinutes}m`;
 }
 
+function getProgressWidth(percentage = 0) {
+  return Math.min(Math.max(percentage, 0), 100);
+}
+
+function getWorkloadInsight(stats) {
+  if (!stats || stats.total_tasks === 0) {
+    return {
+      icon: '🌱',
+      title: 'Ready to get started?',
+      message: 'Add your first study task and start building your study plan.'
+    };
+  }
+
+  if (stats.pending_tasks === 0) {
+    return {
+      icon: '🎉',
+      title: 'All caught up!',
+      message: 'You have completed every current task. Great work!'
+    };
+  }
+
+  if (stats.critical_tasks > 0) {
+    return {
+      icon: '🚨',
+      title: 'Critical tasks need attention',
+      message: `You have ${stats.critical_tasks} critical task${
+        stats.critical_tasks !== 1 ? 's' : ''
+      } waiting for you. Consider handling ${
+        stats.critical_tasks === 1 ? 'it' : 'them'
+      } first.`
+    };
+  }
+
+  if (stats.completion_percentage >= 75) {
+    return {
+      icon: '🔥',
+      title: 'Excellent progress!',
+      message: `You've completed ${stats.completion_percentage}% of your tasks. Keep the momentum going!`
+    };
+  }
+
+  if (stats.completion_percentage >= 50) {
+    return {
+      icon: '💪',
+      title: 'Good progress!',
+      message: `You're more than halfway through your workload. Keep going!`
+    };
+  }
+
+  return {
+    icon: '📚',
+    title: 'Focus on your next task',
+    message: `You have ${formatStudyTime(
+      stats.pending_study_minutes
+    )} of estimated study time remaining.`
+  };
+}
+
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [nextTask, setNextTask] = useState(null);
@@ -263,6 +321,32 @@ export default function Dashboard() {
     }
   };
 
+  const completionPercentage =
+    stats?.completion_percentage ?? 0;
+
+  const progressWidth =
+    getProgressWidth(completionPercentage);
+
+  const totalStudyMinutes =
+    stats?.total_study_minutes ?? 0;
+
+  const pendingStudyMinutes =
+    stats?.pending_study_minutes ?? 0;
+
+  const pendingWorkloadPercentage =
+    totalStudyMinutes > 0
+      ? Math.round(
+          (pendingStudyMinutes / totalStudyMinutes) * 100
+        )
+      : 0;
+
+  const urgencyTotal =
+    (stats?.critical_tasks ?? 0) +
+    (stats?.high_urgency_tasks ?? 0);
+
+  const workloadInsight =
+    getWorkloadInsight(stats);
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -402,7 +486,7 @@ export default function Dashboard() {
           <p className="mt-2 text-3xl font-bold text-blue-600">
             {statsLoading
               ? '...'
-              : `${stats?.completion_percentage ?? 0}%`}
+              : `${completionPercentage}%`}
           </p>
         </div>
       </div>
@@ -424,49 +508,166 @@ export default function Dashboard() {
             Loading study analytics...
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl bg-slate-50 p-5">
-              <p className="text-sm text-gray-500">
-                Total Study Time
-              </p>
+          <div className="space-y-6">
+            {/* Daily Workload Insight */}
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-5">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">
+                  {workloadInsight.icon}
+                </div>
 
-              <p className="mt-2 text-2xl font-bold text-gray-900">
-                {formatStudyTime(
-                  stats?.total_study_minutes ?? 0
-                )}
-              </p>
+                <div>
+                  <h3 className="font-semibold text-indigo-900">
+                    {workloadInsight.title}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-indigo-700">
+                    {workloadInsight.message}
+                  </p>
+                </div>
+              </div>
             </div>
 
+            {/* Completion Progress */}
             <div className="rounded-xl bg-slate-50 p-5">
-              <p className="text-sm text-gray-500">
-                Pending Study Time
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Study Completion
+                  </p>
 
-              <p className="mt-2 text-2xl font-bold text-orange-600">
-                {formatStudyTime(
-                  stats?.pending_study_minutes ?? 0
-                )}
-              </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {stats?.completed_tasks ?? 0} of{' '}
+                    {stats?.total_tasks ?? 0} tasks completed
+                  </p>
+                </div>
+
+                <span className="text-2xl font-bold text-indigo-600">
+                  {completionPercentage}%
+                </span>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-indigo-600 transition-all duration-700"
+                  style={{
+                    width: `${progressWidth}%`,
+                  }}
+                />
+              </div>
             </div>
 
+            {/* Workload Progress */}
             <div className="rounded-xl bg-slate-50 p-5">
-              <p className="text-sm text-gray-500">
-                Critical Tasks
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Remaining Study Workload
+                  </p>
 
-              <p className="mt-2 text-2xl font-bold text-red-600">
-                {stats?.critical_tasks ?? 0}
-              </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatStudyTime(pendingStudyMinutes)} remaining
+                    out of {formatStudyTime(totalStudyMinutes)}
+                  </p>
+                </div>
+
+                <span className="text-lg font-bold text-orange-600">
+                  {pendingWorkloadPercentage}%
+                </span>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-orange-500 transition-all duration-700"
+                  style={{
+                    width: `${pendingWorkloadPercentage}%`,
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-5">
-              <p className="text-sm text-gray-500">
-                High Urgency
-              </p>
+            {/* Analytics Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 p-5">
+                <p className="text-sm text-gray-500">
+                  Total Study Time
+                </p>
 
-              <p className="mt-2 text-2xl font-bold text-yellow-600">
-                {stats?.high_urgency_tasks ?? 0}
-              </p>
+                <p className="mt-2 text-2xl font-bold text-gray-900">
+                  {formatStudyTime(totalStudyMinutes)}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-5">
+                <p className="text-sm text-gray-500">
+                  Pending Study Time
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-orange-600">
+                  {formatStudyTime(pendingStudyMinutes)}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-5">
+                <p className="text-sm text-gray-500">
+                  Critical Tasks
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-red-600">
+                  {stats?.critical_tasks ?? 0}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-5">
+                <p className="text-sm text-gray-500">
+                  High Urgency
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-yellow-600">
+                  {stats?.high_urgency_tasks ?? 0}
+                </p>
+              </div>
+            </div>
+
+            {/* Urgency Overview */}
+            <div className="rounded-xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Urgent Workload
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Critical and high-urgency pending tasks
+                  </p>
+                </div>
+
+                <span className="text-2xl font-bold text-red-600">
+                  {urgencyTotal}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-red-50 p-4">
+                  <p className="text-xs text-red-600">
+                    Critical
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-red-700">
+                    {stats?.critical_tasks ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-yellow-50 p-4">
+                  <p className="text-xs text-yellow-600">
+                    High
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-yellow-700">
+                    {stats?.high_urgency_tasks ?? 0}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
